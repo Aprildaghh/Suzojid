@@ -96,9 +96,10 @@ begin
     if listBox.Selected[i] = True then
     begin
       Result := listBox.Items[i];
-      break;
+      Exit;
     end;
   end;
+  Result := '';
 end;
 
 function getCurrentListItemIndex(listBox: TListBox): integer;
@@ -191,7 +192,14 @@ var
   theNote: double;
   theStudent: TStudent;
   theLecture: TLecture;
+begin
+
+  if (getSelected(studentListBox) = '') or (getSelected(lectureListBox) = '') then
   begin
+    ShowMessage('Student or Lecture not selected!');
+    Exit;
+  end;
+
 
   // Get note from user
   theNote := StrToFloat(inputBox('Assign Note', '', ''));
@@ -237,6 +245,9 @@ begin
   onStudent := False;
 
   assignFile(myFile, 'marti.txt');
+
+  if not FileExists('marti.txt') then
+    Exit;
 
   Reset(myFile);
 
@@ -375,6 +386,13 @@ var
   deletedLectureName: string;
   j: Integer;
 begin
+
+  if getSelected(lectureListBox) = '' then
+  begin
+    ShowMessage('Lecture not selected!');
+    Exit;
+  end;
+
   deletedLectureName := lectures[getLectureIndex(sliceUntilComma(getSelected(lectureListBox)))].lectureName;
   lectures[getLectureIndex(sliceUntilComma(getSelected(lectureListBox)))].lectureName := '';
   lectureListBox.DeleteSelected;
@@ -413,6 +431,13 @@ var
   theStudent: TStudent;
   theLecture: TLecture;
 begin
+
+  if getSelected(studentListBox) = '' then
+  begin
+    ShowMessage('Student not selected!');
+    Exit;
+  end;
+
   theStudent := students[getStudentIndex(sliceUntilComma(getSelected(studentListBox)))];
   deletedStudentName := theStudent.studentName;
   theStudent.studentName := '';

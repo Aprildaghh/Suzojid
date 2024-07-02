@@ -96,9 +96,10 @@ begin
     if listBox.Selected[i] = True then
     begin
       Result := listBox.Items[i];
-      break;
+      Exit;
     end;
   end;
+  Result := '';
 end;
 
 function getCurrentListItemIndex(listBox: TListBox): integer;
@@ -237,6 +238,9 @@ begin
   onStudent := False;
 
   assignFile(myFile, 'marti.txt');
+
+  if not FileExists('marti.txt') then
+    Exit;
 
   Reset(myFile);
 
@@ -406,15 +410,51 @@ begin
 end;
 
 procedure TmainForm.removeStudentBtnClick(Sender: TObject);
+var
+  i, j, studentCount: integer;
+  theNote, noteCount: double;
+  deletedStudentName, lectureName: string;
+  theStudent: TStudent;
+  theLecture: TLecture;
 begin
-  students[getStudentIndex(sliceUntilComma(getSelected(studentListBox)))].studentName := '';
+
+  if getSelected(studentListBox) = '' then
+  begin
+
+  end;
+
+
+  theStudent := students[getStudentIndex(sliceUntilComma(getSelected(studentListBox)))];
+  deletedStudentName := theStudent.studentName;
+  theStudent.studentName := '';
   studentListBox.DeleteSelected;
+
+  for i := 0 to theStudent.lectureTaken-1 do
+  begin
+    lectureName := theStudent.lectureNames.Items[i];
+    theNote := theStudent.notes.Items[i];
+
+    if lectureName = '' then
+      continue;
+
+    // take the lecture
+    theLecture := lectures[getLectureIndex(lectureName)];
+
+    // dec studentNumber by 1
+    dec(theLecture.studentTaken);
+
+    // if studentNumber is 0 avg is 0
+    // else dec theNote from avg * studentNumber
+    if theLecture.studentTaken = 0 then
+      theLecture.noteAvg := 0
+    else
+    begin
+      theLecture.noteAvg := ((theLecture.noteAvg * (theLecture.studentTaken+1)) - theNote) / theLecture.studentTaken;
+    end;
+
+  end;
 
   fillListBoxes;
 end;
 
 end.
-
-{
-  remove student and lecture doesnt remove the thingy from gpa and avg
-}
