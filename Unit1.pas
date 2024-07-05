@@ -4,22 +4,53 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, System.Generics.Collections, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls;
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Math;
 
 type
 
-  TLecture = class
-    lectureName: string;
-    noteAvg: double;
-    studentTaken: integer;
+  TSkeleton = class (TObject)
+    private
+      tName           : string;
+      tAvg            : double;
+      tHowMuchTaken   : integer;
+      function GetAvg: double;
+      function GetHowMuchTaken: integer;
+      function GetName: string;
+      procedure SetHowMuchTaken(const Value: integer);
+      procedure SetName(const Value: string);
+      procedure SetAvg(const Value: double);
+      function getListLine: string;
+    public
+      procedure updateAvg(newNote: double);
+      property Name: string read tName write tName;
+      property Avg: double read tAvg write tAvg;
+      property HowMuchTaken: integer read tHowMuchTaken write tHowMuchTaken;
+      property ListLine: string read getListLine;
+      constructor Create(tName: string);
+
   end;
 
-  TStudent = class
-    studentName: string;
-    gpa: double;
-    lectureTaken: integer;
-    lectureNames: TList<string>;
-    notes: TList<double>;
+  TLecture = class (TSkeleton)
+    private
+      function getTextLine: string;
+    public
+      property TextLine:string read getTextLine;
+  end;
+
+  TStudent = class (TSkeleton)
+    private
+      tLectureNames : TList<string>;
+      tNotes        : TList<double>;
+      function getTextLine: string;
+    public
+      procedure addLectureAndNote(tLecture: TLecture; tNote: double);
+      procedure addLecture(tLectureName: string);
+      procedure addNote(tNote: double);
+      procedure AddLectureName(const Value: string);
+      function GetLectureNames: TList<string>;
+      function GetNotes: TList<double>;
+      property TextLine: string read getTextLine;
+      constructor Create(tName: string);
   end;
 
   TmainForm = class(TForm)
@@ -39,14 +70,12 @@ type
     procedure FormDestroy(Sender: TObject);
   private
     { Private declarations }
-    lectures: array[0..512] of TLecture;
-    students: array[0..512] of TStudent;
-    lectureArrIndex, studentArrIndex: integer;
+    lectures: TList<TLecture>;
+    students: TList<TStudent>;
+    const textFileName: string = 'marti.txt';
   public
     { Public declarations }
   end;
-
-
 
 var
   mainForm: TmainForm;
@@ -55,24 +84,28 @@ implementation
 
 {$R *.dfm}
 
-function fillListBoxes:boolean;
+procedure fillListBoxes;
 var
-  i: Integer;
+  i               : Integer;
+  studentList,
+  lectureList     : TListBox;
 begin
-  mainForm.studentListBox.Items.Clear;
-  for i := 0 to mainForm.studentArrIndex-1 do
+  studentList := mainForm.studentListBox;
+  lectureList := mainForm.lectureListBox;
+
+  studentList.Clear;
+  lectureList.Clear;
+
+  for i := 0 to Math.Max(mainForm.students.Count, mainForm.lectures.Count) - 1 do
   begin
-    if mainForm.students[i].studentName = '' then
-      continue;
-    mainForm.studentListBox.Items.Add(mainForm.students[i].studentName + ', '+floattostr(mainForm.students[i].gpa));
+    if i < mainForm.students.Count then
+      studentList.AddItem(mainForm.students.ExtractAt(i).getTextLine, nil);
+    if i < mainForm.lectures.Count then
+      lectureList.AddItem(mainForm.lectures.ExtractAt(i).getTextLine, nil);
   end;
-  mainForm.lectureListBox.Items.Clear;
-  for i := 0 to mainForm.lectureArrIndex-1 do
-  begin
-    if mainForm.lectures[i].lectureName = '' then
-      continue;
-    mainForm.lectureListBox.Items.Add(mainForm.lectures[i].lectureName + ', '+floattostr(mainForm.lectures[i].noteAvg));
-  end;
+
+  studentList.Refresh;
+  lectureList.Refresh;
 end;
 
 function sliceUntilComma(value: string): string;
@@ -81,47 +114,18 @@ var
   finalProduct: string;
 begin
   for i := 1 to value.LastIndexOf(',') do
-  begin
     finalProduct := finalProduct + value[i];
-  end;
+
   Result := finalProduct;
-end;
-
-function getSelected(listBox: TListBox): string;
-var
-  i: Integer;
-begin
-  for i := 0 to listBox.Count-1 do
-  begin
-    if listBox.Selected[i] = True then
-    begin
-      Result := listBox.Items[i];
-      Exit;
-    end;
-  end;
-  Result := '';
-end;
-
-function getCurrentListItemIndex(listBox: TListBox): integer;
-var
-  i: Integer;
-begin
-  for i := 0 to listBox.Count - 1 do
-  begin
-    if listBox.Selected[i] then
-    begin
-      Result := i;
-    end;
-  end;
 end;
 
 function getStudentIndex(name: string): integer;
 var
   i: Integer;
 begin
-  for i := 0 to mainForm.studentArrIndex - 1 do
+  for i := 0 to mainForm.students.Count - 1 do
   begin
-    if mainForm.students[i].studentName = name then
+    if mainForm.students[i].getName = name then
     begin
       Result := i;
       break;
@@ -134,9 +138,9 @@ function getLectureIndex(name: string): integer;
 var
   i: integer;
 begin
-  for i := 0 to mainForm.lectureArrIndex - 1 do
+  for i := 0 to mainForm.lectures.Count - 1 do
   begin
-    if mainForm.lectures[i].lectureName = name then
+    if mainForm.lectures[i].getName = name then
     begin
       Result := i;
       break;
@@ -154,13 +158,9 @@ var
     showmessage('Invalid lecture!')
   else
   begin
-    lecture := TLecture.Create;
+    lecture := TLecture.Create(lectureName);
+    lectures.Add(lecture);
     lectureListBox.AddItem(lectureName + ', 0.0', nil);
-    lecture.lectureName := lectureName;
-    lecture.noteAvg := 0.0;
-    lecture.studentTaken := 0;
-    lectures[lectureArrIndex] := lecture;
-    inc(lectureArrIndex);
   end;
 
 end;
@@ -175,15 +175,9 @@ begin
     showmessage('Invalid student name!')
   else
   begin
-    student := TStudent.Create;
+    student := TStudent.Create(studentName);
+    students.Add(student);
     studentListBox.AddItem(studentName + ', 0.0', nil);
-    student.studentName := studentName;
-    student.gpa := 0.0;
-    student.lectureTaken := 0;
-    student.lectureNames := TList<string>.Create;
-    student.notes := TList<double>.Create;
-    students[studentArrIndex] := student;
-    inc(studentArrIndex);
   end;
 end;
 
@@ -194,39 +188,28 @@ var
   theLecture: TLecture;
 begin
 
-  if (getSelected(studentListBox) = '') or (getSelected(lectureListBox) = '') then
+  if (studentListBox.Items[studentListBox.ItemIndex] = '') or
+    (lectureListBox.Items[lectureListBox.ItemIndex] = '') then
   begin
     ShowMessage('Student or Lecture not selected!');
     Exit;
   end;
 
-
   // Get note from user
   theNote := StrToFloat(inputBox('Assign Note', '', ''));
 
-  theStudent := students[getStudentIndex(sliceUntilComma(getSelected(studentListBox)))];
-  theLecture := lectures[getLectureIndex(sliceUntilComma(getSelected(lectureListBox)))];
+  theStudent := students.ExtractAt(getStudentIndex(sliceUntilComma(studentListBox.Items[studentListBox.ItemIndex])));
+  theLecture := lectures.ExtractAt(getLectureIndex(sliceUntilComma(lectureListBox.Items[lectureListBox.ItemIndex])));
+  showmessage('2');
+  // update avg notes
+  theStudent.UpdateAvg(theNote);
+  theLecture.UpdateAvg(theNote);
 
-  // update studentGpa
-  // ((gpa*lecturetaken) + theNote ) / (lecturetaken+1)
-  theStudent.gpa := ((theStudent.gpa * theStudent.lectureTaken) + theNote) / (theStudent.lectureTaken+1);
-
-  // update lecture noteAvg
-  theLecture.noteAvg := ((theLecture.noteAvg * theLecture.studentTaken) + theNote) / (theLecture.studentTaken+1);
-
-  if theStudent.lectureNames.IndexOf(theLecture.lectureName) = -1 then
-  begin
-    inc(theStudent.lectureTaken);
-    inc(theLecture.studentTaken);
-    theStudent.lectureNames.Add(theLecture.lectureName);
-    theStudent.notes.Add(theNote);
-  end;
-
-
+  if theStudent.tLectureNames.IndexOf(theLecture.GetName) = -1 then
+    theStudent.addLectureAndNote(theLecture, theNote);
 
   // update listBoxes
-  studentListBox.Items.Strings[getCurrentListItemIndex(studentListBox)] := theStudent.studentName + ', ' + floattostr(theStudent.gpa);
-  lectureListBox.Items.Strings[getCurrentListItemIndex(lectureListBox)] := thelecture.lectureName + ', ' + floattostr(thelecture.noteAvg);
+  fillListBoxes;
 end;
 
 procedure TmainForm.FormCreate(Sender: TObject);
@@ -238,15 +221,15 @@ var
   newLecture: TLecture;
   newStudent: TStudent;
 begin
-  studentArrIndex := 0;
-  lectureArrIndex := 0;
-
   newData := '';
   onStudent := False;
 
-  assignFile(myFile, 'marti.txt');
+  students := TList<TStudent>.Create;
+  lectures := TList<TLecture>.Create;
 
-  if not FileExists('marti.txt') then
+  assignFile(myFile, textFileName);
+
+  if not FileExists(textFileName) then
     Exit;
 
   Reset(myFile);
@@ -254,59 +237,53 @@ begin
   while not Eof(myFile) do
   begin
     Readln(myFile, line);
+    newData := '';
+    flag := 0;
 
     if line = '--' then
     begin
       onStudent := True;
-      newData := '';
       continue;
     end;
 
     if not onStudent then
     begin
       // LECTURE
-      newData := '';
-      flag := 0;
-      newLecture := TLecture.Create;
+      newLecture := TLecture.Create('');
       for i := 1 to line.Length do
       begin
         if line[i] = '/' then
         begin
           if flag = 0 then
-            newLecture.lectureName := newData;
+            newLecture.SetName(newData);
           if flag = 1 then
-            newLecture.noteAvg := strtofloat(newData);
+            newLecture.SetAvg(strtofloat(newData));
           if flag = 2 then
-            newLecture.studentTaken := strtoint(newData);
+            newLecture.SetHowMuchTaken(strtoint(newData));
           inc(flag);
           newData := '';
           continue;
         end;
         newData := newData + line[i];
       end;
-      lectures[lectureArrIndex] := newLecture;
-      inc(lectureArrIndex);
+      lectures.Add(newLecture);
     end;
     if onStudent then
     begin
       // STUDENT
-      flag := 0;
-      newData := '';
-      newStudent := TStudent.Create;
-      newStudent.lectureNames := TList<string>.Create;
-      newStudent.notes := TList<double>.Create;
+      newStudent := TStudent.Create('');
       for i := 1 to line.Length do
       begin
         if line[i] = '/' then
         begin
           if flag = 0 then
-            newStudent.studentName := newData;
+            newStudent.SetName(newData);
           if flag = 1 then
-            newStudent.gpa := strtofloat(newData);
+            newStudent.SetAvg(strtofloat(newData));
           if flag = 2 then
-            newStudent.lectureTaken := strtoint(newData);
+            newStudent.SetHowMuchTaken(strtoint(newData));
           if flag = 3 then
-            newStudent.notes.Add(strtofloat(newData));
+            newStudent.AddNote(strtofloat(newData));
 
           if flag <> 3 then
             inc(flag);
@@ -316,15 +293,13 @@ begin
         end;
         if line[i] = '\' then
         begin
-          newStudent.lectureNames.Add(newData);
+          newStudent.AddLecture(newData);
           newData:= '';
           continue;
         end;
         newData := newData + line[i];
       end;
-
-      students[studentArrIndex] := newStudent;
-      inc(studentArrIndex);
+      students.Add(newStudent);
     end;
 
   end;
@@ -345,38 +320,35 @@ begin
   ReWrite(myFile);
 
   // LECTURE
-  for i := 0 to lectureArrIndex-1 do
+  for i := 0 to lectures.Count-1 do
   begin
-    if lectures[i].lectureName = '' then
+    if lectures.ExtractAt(i).GetName = '' then
       continue;
-
-    line := lectures[i].lectureName + '/' + floattostr(lectures[i].noteAvg) + '/' + inttostr(lectures[i].studentTaken);
-    writeln(myFile, line);
+    showmessage(lectures.ExtractAt(i).TextLine);
+    writeln(myFile, lectures.ExtractAt(i).TextLine);
   end;
 
   // write --
   writeln(myFile, '--');
 
   // STUDENT
-  for i := 0 to studentArrIndex-1 do
+  for i := 0 to students.Count-1 do
   begin
-    if students[i].studentName = '' then
+    if students.ExtractAt(i).GetName = '' then
       continue;
 
-    line := students[i].studentName+'/'+floattostr(students[i].gpa)+'/'+inttostr(students[i].lectureTaken)+'/';
+    line := students.ExtractAt(i).TextLine;
 
-    for j := 0 to students[i].notes.Count-1 do
+    for j := 0 to students.ExtractAt(i).GetNotes.Count-1 do
     begin
-      line := line + students[i].lectureNames.Items[j] + '\' + floattostr(students[i].notes.Items[j]) + '/';
+      line := line + students.ExtractAt(i).GetLectureNames.Items[j] + '\' + floattostr(students.ExtractAt(i).GetNotes.Items[j]) + '/';
     end;
-
+    showmessage(line);
     writeln(myFile, line);
 
   end;
 
-
-  closeFile(myFile);
-
+  CloseFile(myFile);
 end;
 
 procedure TmainForm.removeLectureBtnClick(Sender: TObject);
@@ -387,35 +359,34 @@ var
   j: Integer;
 begin
 
-  if getSelected(lectureListBox) = '' then
+  if lectureListBox.Items[lectureListBox.ItemIndex] = '' then
   begin
     ShowMessage('Lecture not selected!');
     Exit;
   end;
 
-  deletedLectureName := lectures[getLectureIndex(sliceUntilComma(getSelected(lectureListBox)))].lectureName;
-  lectures[getLectureIndex(sliceUntilComma(getSelected(lectureListBox)))].lectureName := '';
+  deletedLectureName := lectures[getLectureIndex(sliceUntilComma(lectureListBox.Items[lectureListBox.ItemIndex]))].GetName;
+  lectures[getLectureIndex(sliceUntilComma(lectureListBox.Items[lectureListBox.ItemIndex]))].SetName('');
   lectureListBox.DeleteSelected;
 
-  for i := 0 to studentArrIndex-1 do
+  for i := 0 to students.Count-1 do
   begin
-    if students[i].lectureNames.IndexOf(deletedLectureName) <> -1 then
+    if students[i].GetLectureNames.IndexOf(deletedLectureName) <> -1 then
     begin
-      students[i].notes.Items[students[i].lectureNames.IndexOf(deletedLectureName)] := 0;
-      students[i].lectureNames.Items[students[i].lectureNames.IndexOf(deletedLectureName)] := '';
-      dec(students[i].lectureTaken);
-      if students[i].lectureTaken > 0 then
+      students[i].GetNotes.Items[students[i].GetLectureNames.IndexOf(deletedLectureName)] := 0;
+      students[i].GetLectureNames.Items[students[i].GetLectureNames.IndexOf(deletedLectureName)] := '';
+      students[i].SetHowMuchTaken(students[i].GetHowMuchTaken-1);
+      if students[i].GetHowMuchTaken > 0 then
       begin
         noteCount := 0;
-        for j := 0 to students[i].notes.Count-1 do
+        for j := 0 to students[i].GetNotes.Count-1 do
         begin
-          noteCount := noteCount + students[i].notes.Items[j];
+          noteCount := noteCount + students[i].GetNotes.Items[j];
         end;
-        students[i].gpa := noteCount / students[i].lectureTaken;
+        students[i].SetAvg(noteCount / students[i].GetHowMuchTaken);
       end
       else
-        students[i].gpa := 0;
-
+        students[i].SetAvg(0);
     end;
   end;
 
@@ -425,28 +396,28 @@ end;
 
 procedure TmainForm.removeStudentBtnClick(Sender: TObject);
 var
-  i, j, studentCount: integer;
-  theNote, noteCount: double;
+  i: integer;
+  theNote: double;
   deletedStudentName, lectureName: string;
   theStudent: TStudent;
   theLecture: TLecture;
 begin
 
-  if getSelected(studentListBox) = '' then
+  if studentListBox.Items[studentListBox.ItemIndex] = '' then
   begin
     ShowMessage('Student not selected!');
     Exit;
   end;
 
-  theStudent := students[getStudentIndex(sliceUntilComma(getSelected(studentListBox)))];
-  deletedStudentName := theStudent.studentName;
-  theStudent.studentName := '';
+  theStudent := students[getStudentIndex(sliceUntilComma(studentListBox.Items[studentListBox.ItemIndex]))];
+  deletedStudentName := theStudent.GetName;
+  theStudent.SetName('');
   studentListBox.DeleteSelected;
 
-  for i := 0 to theStudent.lectureTaken-1 do
+  for i := 0 to theStudent.GetHowMuchTaken-1 do
   begin
-    lectureName := theStudent.lectureNames.Items[i];
-    theNote := theStudent.notes.Items[i];
+    lectureName := theStudent.GetLectureNames.Items[i];
+    theNote := theStudent.GetNotes.Items[i];
 
     if lectureName = '' then
       continue;
@@ -455,15 +426,15 @@ begin
     theLecture := lectures[getLectureIndex(lectureName)];
 
     // dec studentNumber by 1
-    dec(theLecture.studentTaken);
+    theLecture.SetHowMuchTaken(theLecture.GetHowMuchTaken-1);
 
     // if studentNumber is 0 avg is 0
     // else dec theNote from avg * studentNumber
-    if theLecture.studentTaken = 0 then
-      theLecture.noteAvg := 0
+    if theLecture.GetHowMuchTaken = 0 then
+      theLecture.SetAvg(0)
     else
     begin
-      theLecture.noteAvg := ((theLecture.noteAvg * (theLecture.studentTaken+1)) - theNote) / theLecture.studentTaken;
+      theLecture.SetAvg(((theLecture.GetAvg * (theLecture.GetHowMuchTaken+1)) - theNote) / theLecture.GetHowMuchTaken);
     end;
 
   end;
@@ -471,4 +442,114 @@ begin
   fillListBoxes;
 end;
 
+{ TLecture }
+
+function TLecture.getTextLine: string;
+begin
+  Result := tName + '/' + floattostr(tAvg) + '/' + inttostr(tHowMuchTaken);
+end;
+
+{ TSkeleton }
+
+constructor TSkeleton.Create(tName: string);
+begin
+  SetName(tName);
+  SetAvg(0.0);
+  SetHowMuchTaken(0);
+end;
+
+function TSkeleton.GetAvg: double;
+begin
+  Result := tAvg;
+end;
+
+function TSkeleton.GetHowMuchTaken: integer;
+begin
+  Result := tHowMuchTaken;
+end;
+
+function TSkeleton.getListLine: string;
+begin
+  Result := self.GetName + ', ' + floattostr(self.GetAvg);
+end;
+
+function TSkeleton.GetName: string;
+begin
+  Result := tName;
+end;
+
+procedure TSkeleton.SetAvg(const Value: double);
+begin
+  tAvg := Value;
+end;
+
+procedure TSkeleton.SetHowMuchTaken(const Value: integer);
+begin
+  tHowMuchTaken := Value;
+end;
+
+procedure TSkeleton.SetName(const Value: string);
+begin
+  tName := Value;
+end;
+
+procedure TSkeleton.updateAvg(newNote: double);
+begin
+  self.tAvg := ((self.tAvg * self.tHowMuchTaken) + newNote) / (self.tHowMuchTaken+1);
+end;
+
+{ TStudent }
+
+procedure TStudent.addLecture(tLectureName: string);
+begin
+  self.tLectureNames.Add(tLectureName);
+end;
+
+procedure TStudent.addLectureAndNote(tLecture: TLecture; tNote: double);
+begin
+    SetHowMuchTaken(self.GetHowMuchTaken+1);
+    tLecture.SetHowMuchTaken(tLecture.GetHowMuchTaken+1);
+    tLectureNames.Add(tLecture.GetName);
+    tNotes.Add(tNote);
+end;
+
+procedure TStudent.AddLectureName(const Value: string);
+begin
+  self.tLectureNames.Add(Value);
+end;
+
+procedure TStudent.addNote(tNote: double);
+begin
+  self.tNotes.Add(tNote);
+end;
+
+constructor TStudent.Create(tName: string);
+begin
+  inherited Create(tName);
+  tLectureNames := TList<string>.Create;
+  tNotes := TList<double>.Create;
+end;
+
+function TStudent.GetLectureNames: TList<string>;
+begin
+  Result := self.tLectureNames;
+end;
+
+function TStudent.GetNotes: TList<double>;
+begin
+  Result := self.tNotes;
+end;
+
+function TStudent.getTextLine: string;
+begin
+  Result := GetName+'/'+floattostr(GetAvg)+'/'+inttostr(GetHowMuchTaken)+'/';
+end;
+
 end.
+// addLectureBtnClick, addStudentBtnClick -> merge into 1 function
+// removeLectureBtnClick, removeStudentBtnClick -> sadelestir
+// take classes to another unit
+
+// text ten okurken atlayarak okuyor
+// text e kaydederken atlayarak kaydediyor
+// assign note da ve remove da ekran bosaliyor
