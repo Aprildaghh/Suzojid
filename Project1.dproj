@@ -102,6 +102,9 @@
             <Form>mainForm</Form>
             <FormType>dfm</FormType>
         </DCCReference>
+        <DCCReference Include="SkeletonUnit.pas"/>
+        <DCCReference Include="StudentUnit.pas"/>
+        <DCCReference Include="LectureUnit.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

@@ -4,55 +4,9 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, System.Generics.Collections, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Math;
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Math, StudentUnit, LectureUnit;
 
 type
-
-  TSkeleton = class (TObject)
-    private
-      tName           : string;
-      tAvg            : double;
-      tHowMuchTaken   : integer;
-      function GetAvg: double;
-      function GetHowMuchTaken: integer;
-      function GetName: string;
-      procedure SetHowMuchTaken(const Value: integer);
-      procedure SetName(const Value: string);
-      procedure SetAvg(const Value: double);
-      function getListLine: string;
-    public
-      procedure updateAvg(newNote: double);
-      property Name: string read tName write tName;
-      property Avg: double read tAvg write tAvg;
-      property HowMuchTaken: integer read tHowMuchTaken write tHowMuchTaken;
-      property ListLine: string read getListLine;
-      constructor Create(tName: string);
-
-  end;
-
-  TLecture = class (TSkeleton)
-    private
-      function getTextLine: string;
-    public
-      property TextLine:string read getTextLine;
-  end;
-
-  TStudent = class (TSkeleton)
-    private
-      tLectureNames : TList<string>;
-      tNotes        : TList<double>;
-      function getTextLine: string;
-    public
-      procedure addLectureAndNote(tLecture: TLecture; tNote: double);
-      procedure addLecture(tLectureName: string);
-      procedure addNote(tNote: double);
-      procedure AddLectureName(const Value: string);
-      function GetLectureNames: TList<string>;
-      function GetNotes: TList<double>;
-      property TextLine: string read getTextLine;
-      constructor Create(tName: string);
-  end;
-
   TmainForm = class(TForm)
     studentListBox: TListBox;
     addStudentBtn: TButton;
@@ -205,7 +159,7 @@ begin
   theStudent.UpdateAvg(theNote);
   theLecture.UpdateAvg(theNote);
 
-  if theStudent.tLectureNames.IndexOf(theLecture.GetName) = -1 then
+  if theStudent.GetLectureNames.IndexOf(theLecture.GetName) = -1 then
     theStudent.addLectureAndNote(theLecture, theNote);
 
   // update listBoxes
@@ -442,113 +396,9 @@ begin
   fillListBoxes;
 end;
 
-{ TLecture }
-
-function TLecture.getTextLine: string;
-begin
-  Result := tName + '/' + floattostr(tAvg) + '/' + inttostr(tHowMuchTaken);
-end;
-
-{ TSkeleton }
-
-constructor TSkeleton.Create(tName: string);
-begin
-  SetName(tName);
-  SetAvg(0.0);
-  SetHowMuchTaken(0);
-end;
-
-function TSkeleton.GetAvg: double;
-begin
-  Result := tAvg;
-end;
-
-function TSkeleton.GetHowMuchTaken: integer;
-begin
-  Result := tHowMuchTaken;
-end;
-
-function TSkeleton.getListLine: string;
-begin
-  Result := self.GetName + ', ' + floattostr(self.GetAvg);
-end;
-
-function TSkeleton.GetName: string;
-begin
-  Result := tName;
-end;
-
-procedure TSkeleton.SetAvg(const Value: double);
-begin
-  tAvg := Value;
-end;
-
-procedure TSkeleton.SetHowMuchTaken(const Value: integer);
-begin
-  tHowMuchTaken := Value;
-end;
-
-procedure TSkeleton.SetName(const Value: string);
-begin
-  tName := Value;
-end;
-
-procedure TSkeleton.updateAvg(newNote: double);
-begin
-  self.tAvg := ((self.tAvg * self.tHowMuchTaken) + newNote) / (self.tHowMuchTaken+1);
-end;
-
-{ TStudent }
-
-procedure TStudent.addLecture(tLectureName: string);
-begin
-  self.tLectureNames.Add(tLectureName);
-end;
-
-procedure TStudent.addLectureAndNote(tLecture: TLecture; tNote: double);
-begin
-    SetHowMuchTaken(self.GetHowMuchTaken+1);
-    tLecture.SetHowMuchTaken(tLecture.GetHowMuchTaken+1);
-    tLectureNames.Add(tLecture.GetName);
-    tNotes.Add(tNote);
-end;
-
-procedure TStudent.AddLectureName(const Value: string);
-begin
-  self.tLectureNames.Add(Value);
-end;
-
-procedure TStudent.addNote(tNote: double);
-begin
-  self.tNotes.Add(tNote);
-end;
-
-constructor TStudent.Create(tName: string);
-begin
-  inherited Create(tName);
-  tLectureNames := TList<string>.Create;
-  tNotes := TList<double>.Create;
-end;
-
-function TStudent.GetLectureNames: TList<string>;
-begin
-  Result := self.tLectureNames;
-end;
-
-function TStudent.GetNotes: TList<double>;
-begin
-  Result := self.tNotes;
-end;
-
-function TStudent.getTextLine: string;
-begin
-  Result := GetName+'/'+floattostr(GetAvg)+'/'+inttostr(GetHowMuchTaken)+'/';
-end;
-
 end.
 // addLectureBtnClick, addStudentBtnClick -> merge into 1 function
 // removeLectureBtnClick, removeStudentBtnClick -> sadelestir
-// take classes to another unit
 
 // text ten okurken atlayarak okuyor
 // text e kaydederken atlayarak kaydediyor

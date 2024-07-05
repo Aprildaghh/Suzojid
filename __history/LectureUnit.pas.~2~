@@ -1,0 +1,15 @@
+unit LectureUnit;
+
+interface
+
+type
+  TLecture = class (TSkeleton)
+    private
+      function getTextLine: string;
+    public
+      property TextLine:string read getTextLine;
+  end;
+
+implementation
+
+end.

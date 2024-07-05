@@ -3,8 +3,8 @@ unit SkeletonUnit;
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, System.Generics.Collections, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Math;
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
+  System.Generics.Collections, Vcl.Graphics, Math;
 
 type
 
@@ -13,6 +13,7 @@ type
       tName           : string;
       tAvg            : double;
       tHowMuchTaken   : integer;
+    public
       function GetAvg: double;
       function GetHowMuchTaken: integer;
       function GetName: string;
@@ -20,7 +21,6 @@ type
       procedure SetName(const Value: string);
       procedure SetAvg(const Value: double);
       function getListLine: string;
-    public
       procedure updateAvg(newNote: double);
       property Name: string read tName write tName;
       property Avg: double read tAvg write tAvg;
