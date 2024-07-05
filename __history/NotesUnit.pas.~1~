@@ -1,0 +1,16 @@
+unit NotesUnit;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
+  System.Generics.Collections, Vcl.Graphics, StudentUnit, NoteUnit;
+
+type
+  TNotes = class
+
+  end;
+
+implementation
+
+end.

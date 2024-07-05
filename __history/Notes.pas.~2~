@@ -1,0 +1,19 @@
+unit Notes;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
+  System.Generics.Collections, Vcl.Graphics, Math, StudentUnit, LectureUnit;
+
+type
+
+  TNotes = record
+    tStudent    : TStudent;
+    tLecture    : TLecture;
+    tNote       : double;
+  end;
+
+implementation
+
+end.

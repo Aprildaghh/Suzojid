@@ -4,7 +4,7 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, System.Generics.Collections, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Math, StudentUnit, LectureUnit;
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Math, NotesUnit;
 
 type
   TmainForm = class(TForm)
@@ -24,8 +24,7 @@ type
     procedure FormDestroy(Sender: TObject);
   private
     { Private declarations }
-    lectures: TList<TLecture>;
-    students: TList<TStudent>;
+    tNotes     : TNotes;
     const textFileName: string = 'marti.txt';
   public
     { Public declarations }
@@ -37,7 +36,7 @@ var
 implementation
 
 {$R *.dfm}
-
+{
 procedure fillListBoxes;
 var
   i               : Integer;
@@ -52,68 +51,26 @@ begin
 
   for i := 0 to Math.Max(mainForm.students.Count, mainForm.lectures.Count) - 1 do
   begin
-    if i < mainForm.students.Count then
-      studentList.AddItem(mainForm.students.ExtractAt(i).getTextLine, nil);
-    if i < mainForm.lectures.Count then
-      lectureList.AddItem(mainForm.lectures.ExtractAt(i).getTextLine, nil);
+    if (i < mainForm.students.Count) and (mainForm.students.ToArray[i].GetName <> '') then
+      studentList.AddItem(mainForm.students.toArray[i].GetListLine, nil);
+    if (i < mainForm.lectures.Count) and (mainForm.lectures.ToArray[i].GetName <> '') then
+      lectureList.AddItem(mainForm.lectures.toArray[i].GetListLine, nil);
   end;
 
   studentList.Refresh;
   lectureList.Refresh;
 end;
-
-function sliceUntilComma(value: string): string;
-var
-  i: Integer;
-  finalProduct: string;
-begin
-  for i := 1 to value.LastIndexOf(',') do
-    finalProduct := finalProduct + value[i];
-
-  Result := finalProduct;
-end;
-
-function getStudentIndex(name: string): integer;
-var
-  i: Integer;
-begin
-  for i := 0 to mainForm.students.Count - 1 do
-  begin
-    if mainForm.students[i].getName = name then
-    begin
-      Result := i;
-      break;
-    end;
-
-  end;
-end;
-
-function getLectureIndex(name: string): integer;
-var
-  i: integer;
-begin
-  for i := 0 to mainForm.lectures.Count - 1 do
-  begin
-    if mainForm.lectures[i].getName = name then
-    begin
-      Result := i;
-      break;
-    end;
-  end;
-end;
-
+}
 procedure TmainForm.addLectureBtnClick(Sender: TObject);
 var
   lectureName: string;
-  lecture: TLecture;
-  begin
+begin
   lectureName := inputbox('Add Lecture', '', '');
   if lectureName = '' then
     showmessage('Invalid lecture!')
   else
   begin
-    lecture := TLecture.Create(lectureName);
-    lectures.Add(lecture);
+    tNotes.AddLecture(lectureName);
     lectureListBox.AddItem(lectureName + ', 0.0', nil);
   end;
 
@@ -137,30 +94,49 @@ end;
 
 procedure TmainForm.assignNoteBtnClick(Sender: TObject);
 var
-  theNote: double;
+  newNote: double;
   theStudent: TStudent;
   theLecture: TLecture;
+  i: Integer;
+  isNewNote: boolean;
 begin
 
-  if (studentListBox.Items[studentListBox.ItemIndex] = '') or
-    (lectureListBox.Items[lectureListBox.ItemIndex] = '') then
+  if (studentListBox.ItemIndex = -1) or
+    (lectureListBox.ItemIndex = -1) then
   begin
     ShowMessage('Student or Lecture not selected!');
     Exit;
   end;
 
   // Get note from user
-  theNote := StrToFloat(inputBox('Assign Note', '', ''));
+  newNote := StrToFloat(inputBox('Assign Note', '', ''));
+  theStudent := students.toArray[studentListBox.ItemIndex];
+  theLecture := lectures.toArray[lectureListBox.ItemIndex];
 
-  theStudent := students.ExtractAt(getStudentIndex(sliceUntilComma(studentListBox.Items[studentListBox.ItemIndex])));
-  theLecture := lectures.ExtractAt(getLectureIndex(sliceUntilComma(lectureListBox.Items[lectureListBox.ItemIndex])));
-  showmessage('2');
-  // update avg notes
-  theStudent.UpdateAvg(theNote);
-  theLecture.UpdateAvg(theNote);
+  // update old note
+  isNewNote := True;
+  for i := 0 to theStudent.GetLectureNames.Count -1 do
+  begin
+    if theStudent.GetLectureNames.Items[i] = theLecture.GetName then
+    begin
+      theStudent.GetNotes.Items[i] := newNote;
+      isNewNote := False;
+      break;
+    end;
+  end;
+  addOrUpdateNote
 
-  if theStudent.GetLectureNames.IndexOf(theLecture.GetName) = -1 then
-    theStudent.addLectureAndNote(theLecture, theNote);
+
+  if isNewNote then
+  begin
+    // theStudent.UpdateAvgForNewNote(newNote);
+    // theLecture.UpdateAvgForNewNote(newNote);
+  end
+  else
+  begin
+    // theStudent.updateAvg(newNote);
+    // theLecture.updateAvg(newNote);
+  end;
 
   // update listBoxes
   fillListBoxes;
@@ -180,6 +156,7 @@ begin
 
   students := TList<TStudent>.Create;
   lectures := TList<TLecture>.Create;
+  notes := TList<TNote>.Create;
 
   assignFile(myFile, textFileName);
 
@@ -276,10 +253,10 @@ begin
   // LECTURE
   for i := 0 to lectures.Count-1 do
   begin
-    if lectures.ExtractAt(i).GetName = '' then
+
+    if lectures.toArray[i].GetName = '' then
       continue;
-    showmessage(lectures.ExtractAt(i).TextLine);
-    writeln(myFile, lectures.ExtractAt(i).TextLine);
+    writeln(myFile, lectures.toArray[i].TextLine);
   end;
 
   // write --
@@ -288,16 +265,15 @@ begin
   // STUDENT
   for i := 0 to students.Count-1 do
   begin
-    if students.ExtractAt(i).GetName = '' then
+    if students.toArray[i].GetName = '' then
       continue;
 
-    line := students.ExtractAt(i).TextLine;
+    line := students.toArray[i].TextLine;
 
-    for j := 0 to students.ExtractAt(i).GetNotes.Count-1 do
+    for j := 0 to students.toArray[i].GetNotes.Count-1 do
     begin
-      line := line + students.ExtractAt(i).GetLectureNames.Items[j] + '\' + floattostr(students.ExtractAt(i).GetNotes.Items[j]) + '/';
+      line := line + students.toArray[i].GetLectureNames.Items[j] + '\' + floattostr(students.toArray[i].GetNotes.Items[j]) + '/';
     end;
-    showmessage(line);
     writeln(myFile, line);
 
   end;
@@ -307,42 +283,40 @@ end;
 
 procedure TmainForm.removeLectureBtnClick(Sender: TObject);
 var
-  i: integer;
-  noteCount: double;
-  deletedLectureName: string;
-  j: Integer;
+  i, j                : integer;
+  noteCount           : double;
+  deletedLecture      : TLecture;
 begin
 
-  if lectureListBox.Items[lectureListBox.ItemIndex] = '' then
+  if lectureListBox.ItemIndex = -1 then
   begin
     ShowMessage('Lecture not selected!');
     Exit;
   end;
 
-  deletedLectureName := lectures[getLectureIndex(sliceUntilComma(lectureListBox.Items[lectureListBox.ItemIndex]))].GetName;
-  lectures[getLectureIndex(sliceUntilComma(lectureListBox.Items[lectureListBox.ItemIndex]))].SetName('');
-  lectureListBox.DeleteSelected;
+  deletedLecture := lectures.ToArray[lectureListBox.ItemIndex];
 
   for i := 0 to students.Count-1 do
   begin
-    if students[i].GetLectureNames.IndexOf(deletedLectureName) <> -1 then
+    if students.toArray[i].GetLectureNames.IndexOf(deletedLecture.GetName) <> -1 then
     begin
-      students[i].GetNotes.Items[students[i].GetLectureNames.IndexOf(deletedLectureName)] := 0;
-      students[i].GetLectureNames.Items[students[i].GetLectureNames.IndexOf(deletedLectureName)] := '';
-      students[i].SetHowMuchTaken(students[i].GetHowMuchTaken-1);
-      if students[i].GetHowMuchTaken > 0 then
+      noteCount := 0;
+      for j := 0 to students.toArray[i].GetNotes.Count-1 do
       begin
-        noteCount := 0;
-        for j := 0 to students[i].GetNotes.Count-1 do
-        begin
-          noteCount := noteCount + students[i].GetNotes.Items[j];
-        end;
-        students[i].SetAvg(noteCount / students[i].GetHowMuchTaken);
-      end
-      else
-        students[i].SetAvg(0);
+        noteCount := noteCount + students.toArray[i].GetNotes.Items[j];
+      end;
+
+      var theStudent: TStudent := students.toArray[i];
+
+      // theStudent.UpdateAvgForNoteDeletion(0);
+      theStudent.GetNotes.Items[theStudent.GetLectureNames.IndexOf(deletedLecture.GetName)] := 0;
+      theStudent.GetLectureNames.Items[theStudent.GetLectureNames.IndexOf(deletedLecture.GetName)] := '';
     end;
   end;
+
+  lectures.Remove(deletedLecture);
+  lectureListBox.DeleteSelected;
+  deletedLecture.Free;
 
   fillListBoxes;
 
@@ -352,23 +326,20 @@ procedure TmainForm.removeStudentBtnClick(Sender: TObject);
 var
   i: integer;
   theNote: double;
-  deletedStudentName, lectureName: string;
+  lectureName: string;
   theStudent: TStudent;
   theLecture: TLecture;
 begin
 
-  if studentListBox.Items[studentListBox.ItemIndex] = '' then
+  if studentListBox.ItemIndex = -1 then
   begin
     ShowMessage('Student not selected!');
     Exit;
   end;
 
-  theStudent := students[getStudentIndex(sliceUntilComma(studentListBox.Items[studentListBox.ItemIndex]))];
-  deletedStudentName := theStudent.GetName;
-  theStudent.SetName('');
-  studentListBox.DeleteSelected;
+  theStudent := students.toArray[studentListBox.ItemIndex];
 
-  for i := 0 to theStudent.GetHowMuchTaken-1 do
+  for i := 0 to theStudent.HowMuchTaken-1 do
   begin
     lectureName := theStudent.GetLectureNames.Items[i];
     theNote := theStudent.GetNotes.Items[i];
@@ -376,30 +347,18 @@ begin
     if lectureName = '' then
       continue;
 
-    // take the lecture
-    theLecture := lectures[getLectureIndex(lectureName)];
+    theLecture := getLectureFromName(lectureName);
 
-    // dec studentNumber by 1
-    theLecture.SetHowMuchTaken(theLecture.GetHowMuchTaken-1);
-
-    // if studentNumber is 0 avg is 0
-    // else dec theNote from avg * studentNumber
-    if theLecture.GetHowMuchTaken = 0 then
-      theLecture.SetAvg(0)
-    else
-    begin
-      theLecture.SetAvg(((theLecture.GetAvg * (theLecture.GetHowMuchTaken+1)) - theNote) / theLecture.GetHowMuchTaken);
+    // theLecture.UpdateAvgForNoteDeletion(theNote);
     end;
 
-  end;
+  students.remove(students.ToArray[studentlistbox.ItemIndex]);
+  studentListBox.DeleteSelected;
+  theStudent.Free;
 
   fillListBoxes;
 end;
 
 end.
-// addLectureBtnClick, addStudentBtnClick -> merge into 1 function
-// removeLectureBtnClick, removeStudentBtnClick -> sadelestir
-
-// text ten okurken atlayarak okuyor
-// text e kaydederken atlayarak kaydediyor
-// assign note da ve remove da ekran bosaliyor
+// note parts are fully broken
+// fillListBox doesn't do anything try to remove it

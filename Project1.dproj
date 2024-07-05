@@ -105,6 +105,8 @@
         <DCCReference Include="SkeletonUnit.pas"/>
         <DCCReference Include="StudentUnit.pas"/>
         <DCCReference Include="LectureUnit.pas"/>
+        <DCCReference Include="NoteUnit.pas"/>
+        <DCCReference Include="NotesUnit.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

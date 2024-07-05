@@ -21,13 +21,11 @@ type
       procedure SetName(const Value: string);
       procedure SetAvg(const Value: double);
       function getListLine: string;
-      procedure updateAvg(newNote: double);
       property Name: string read tName write tName;
       property Avg: double read tAvg write tAvg;
       property HowMuchTaken: integer read tHowMuchTaken write tHowMuchTaken;
       property ListLine: string read getListLine;
       constructor Create(tName: string);
-
   end;
 
 implementation
@@ -72,11 +70,6 @@ end;
 procedure TSkeleton.SetName(const Value: string);
 begin
   tName := Value;
-end;
-
-procedure TSkeleton.updateAvg(newNote: double);
-begin
-  self.tAvg := ((self.tAvg * self.tHowMuchTaken) + newNote) / (self.tHowMuchTaken+1);
 end;
 
 end.

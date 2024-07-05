@@ -1,0 +1,27 @@
+unit NotesUnit;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
+  System.Generics.Collections, Vcl.Graphics, StudentUnit, NoteUnit;
+
+type
+  TNotes = class
+    private
+      tNotes: TList<TNote>;
+    public
+
+      constructor Create;
+  end;
+
+implementation
+
+{ TNotes }
+
+constructor TNotes.Create;
+begin
+  tNotes := TList<TNote>.Create;
+end;
+
+end.
